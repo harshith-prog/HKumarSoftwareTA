@@ -13,6 +13,7 @@ export type Reading = {
   value: number;
   timestamp: string;
   status?: ReadingStatus;
+  lastValidTimestamp?: string;
 };
 
 export type HealthResponse = {
