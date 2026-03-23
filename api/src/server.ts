@@ -18,6 +18,7 @@ type Reading = {
   value: number;
   timestamp: string;
   status?: ReadingStatus;
+  lastValidTimestamp?: string;
 };
 
 const app = express();
@@ -39,7 +40,7 @@ let emulatorWsConnected = false;
 let lastEmulatorMessageAt: string | null = null;
 
 const sensorRanges = new Map<number, { min: number; max: number }>();
-
+const lastValidTimestamps = new Map<number, string>();
 
 const FALLBACK_RANGES_BY_NAME = new Map<string, { min: number; max: number }>([
   ['BATTERY_TEMPERATURE', { min: 20, max: 80 }],
@@ -59,7 +60,7 @@ const FALLBACK_RANGES_BY_NAME = new Map<string, { min: number; max: number }>([
 const oorEvents = new Map<number, number[]>();
 const lastOorAlertAt = new Map<number, number>();
 const OOR_WINDOW_MS = 5000;
-const OOR_THRESHOLD = 3; 
+const OOR_THRESHOLD = 3;
 const OOR_ALERT_COOLDOWN_MS = 2000;
 
 const invalidStats = {
@@ -101,7 +102,7 @@ function normalizeTimestamp(x: unknown): string | null {
     return Number.isFinite(d.getTime()) ? d.toISOString() : null;
   }
   if (typeof x === 'number') {
-    const ms = x < 1e12 ? x * 1000 : x; // seconds vs ms
+    const ms = x < 1e12 ? x * 1000 : x;
     const d = new Date(ms);
     return Number.isFinite(d.getTime()) ? d.toISOString() : null;
   }
@@ -174,12 +175,17 @@ function extractReading(payload: any): Reading | null {
 
 function attachStatusAndTrack(reading: Reading) {
   const range = sensorRanges.get(reading.sensorId);
-  if (!range) return; 
+  if (!range) return;
 
   const isOut = reading.value < range.min || reading.value > range.max;
   reading.status = isOut ? 'out_of_range' : 'ok';
 
-  if (!isOut) return;
+  if (!isOut) {
+    lastValidTimestamps.set(reading.sensorId, reading.timestamp);
+    return;
+  }
+
+  reading.lastValidTimestamp = lastValidTimestamps.get(reading.sensorId);
 
   const now = Date.now();
   const arr = oorEvents.get(reading.sensorId) ?? [];
