@@ -25,6 +25,7 @@ type Row = {
   maxValue?: number;
   value?: number;
   timestamp?: string;
+  lastValidTimestamp?: string;
   status?: 'ok' | 'out_of_range';
 };
 
@@ -134,6 +135,7 @@ export default function Page() {
         maxValue: s.maxValue,
         value: r?.value,
         timestamp: r?.timestamp,
+        lastValidTimestamp: r?.lastValidTimestamp,
         status: r?.status
       };
     });
@@ -216,10 +218,6 @@ export default function Page() {
               <span>Readings cached</span>
               <span className="font-mono">{health?.readingsCached ?? '—'}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Last update</span>
-              <span className="font-mono text-xs">{timeAgo(health?.lastEmulatorMessageAt)}</span>
-            </div>
           </CardContent>
         </Card>
 
@@ -254,18 +252,19 @@ export default function Page() {
                     <TableHead>Range</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[220px]">Timestamp</TableHead>
+                    <TableHead className="w-[220px]">Last valid timestamp</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingSensors && sensors.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-muted-foreground">
+                      <TableCell colSpan={6} className="text-muted-foreground">
                         Loading sensors…
                       </TableCell>
                     </TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-muted-foreground">
+                      <TableCell colSpan={6} className="text-muted-foreground">
                         No sensors match your filter.
                       </TableCell>
                     </TableRow>
@@ -294,6 +293,10 @@ export default function Page() {
 
                         <TableCell className="text-xs font-mono text-muted-foreground">
                           {formatTime(r.timestamp)}
+                        </TableCell>
+
+                        <TableCell className="text-xs font-mono text-muted-foreground">
+                          {r.status === 'out_of_range' ? formatTime(r.lastValidTimestamp) : '—'}
                         </TableCell>
                       </TableRow>
                     ))
